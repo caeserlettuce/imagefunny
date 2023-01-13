@@ -3,9 +3,188 @@
   <head>
     <meta charset="utf-8">
     <title>hi</title>
-  </head>
-  <body style="background-color: black; color: white;">
-    <h1 style="color: white;">hi</h1>
+    <link rel="stylesheet" href="main.css" />
 
+  </head>
+  <body>
+    <h1 class="separator">image funny</h1>
+
+    <h3 class="paragraph">hello welcome to the app</h3>
+
+    <div class="big-wrap">
+      <div class="infopanel-wrap">
+        <div class="infopanel">
+          <svg class="infopanel-preview" viewBox="0 0 4 3", id="filter-svg">
+            <mask id="halfmask">
+              <rect fill="black" x="0" y="0" width="4" height="3" />
+              <rect fill="white" x="2" y="0" width="4" height="3" />
+            </mask>
+            <image href="assets/apple.png" x="0" y="0" width="4" height="3"/>
+            <image href="assets/greyscale.png" x="0" y="0" width="4" height="3" mask="url(#halfmask)" id="filter-img"/>
+          </svg>
+          <h2 id="filter-title"></h2>
+          <h3 class="paragraph" id="filter-description"></h3><br>
+          <h3 id="filter-params-title">required parameters:</h3>
+          <h3 class="paragraph" id="filter-params"></h3>
+        </div> 
+      </div>
+      <div class="secondary-wrap">
+        <div class="filters-wrap">
+          <div class="filters-list" id="filters-list">
+            
+          </div>
+        </div>
+        <div class="form-wrap">
+          <form action="http://localhost:5000/uploader" class="funnyform" method="POST" enctype="multipart/form-data" style="margin-top: 10px;">
+            <label class="input-label" >base image </label> <input type="file" name="file1" /><label class="input-label">secondary image (used with some filters) </label><input type="file" name="file2" /><label class="input-label">invert amount (<span id="invl">1</span>)</label><input type="range" name="invert-amount" id="invert-amount" min="0" max="10" value="10" onchange="update_labels()">
+            <br>
+            
+            <input type="submit" value="process photo"/>
+            <!--if you wana it to be multiple files add "multiple" inside of the input elem -->
+          </form>
+        </div>
+
+      </div>
+    </div>
+    <h3 class="paragraph" id="message"></h3>
+    <div class="result-wrap"><img src="" class="result-image" id="result-image"></div>
+    
+    
+
+
+    <script>
+
+var message_elem = document.getElementById("message");
+
+
+
+var server_status = {};
+var selected_filter = "";
+var hovered_filter = "";
+
+
+// loop init variables
+var rendered_filters = false;
+var displayed_out_img = false;
+
+
+function listify(list, include_and) {
+  var final_string = ""
+  for (i in list) {
+    if (i == 0) {
+      final_string += `${list[i]}`;
+    } else if (i == list.length - 1 ) {
+      if (include_and == true) {
+        final_string += `, and ${list[i]}`;
+      } else {
+        final_string += `, ${list[i]}`;
+      }
+    } else {
+      final_string += `, ${list[i]}`;
+    }
+  }
+  return final_string
+}
+
+
+function update_labels() {
+  document.getElementById("invl").innerHTML = document.getElementById("invert-amount").value;
+}
+
+function render_filterlist() {
+  var final_html = ""
+  for (i in server_status["filters"]) {
+    final_html += `<span class="filter-button" onclick="select_filter('${i}')" onmouseover="hover_filter('${i}', true)" onmouseout="hover_filter('${i}', false)" id="filter_but_${i}">${server_status["filters"][i]["title"]}</span> `
+    document.getElementById("filters-list").innerHTML = final_html;
+  }
+}
+
+function render_filtercard(filter) {
+  document.getElementById("filter-title").innerHTML = `${server_status["filters"][filter]["title"]}`;
+  document.getElementById("filter-description").innerHTML = `${server_status["filters"][filter]["description"]}`;
+  document.getElementById("filter-params").innerHTML = `${listify(server_status["filters"][filter]["parameters"], false)}`;
+  var filter_img = `${filter}.png`;
+  if (server_status["filters"][filter]["img"]) {
+    filter_img = server_status["filters"][filter]["img"]
+  }
+  document.getElementById("filter-img").setAttribute("href", `assets/${filter_img}`);
+}
+
+function select_filter(filter) {
+  console.log(filter)
+  if (selected_filter != "") {
+    document.getElementById(`filter_but_${selected_filter}`).classList.remove("selected-filter");
+  }
+  document.getElementById(`filter_but_${filter}`).classList.add("selected-filter");
+  render_filtercard(filter, selected_filter);
+  selected_filter = filter;
+  fetch("/filter", {
+    method: "POST",
+    headers: {'Content-Type': 'application/json'}, 
+    body: JSON.stringify({"filter": filter})
+  }).catch(err => {
+    console.error("[POST] API down!")
+  });
+}
+
+function hover_filter(filter, hovertype) {
+  if (hovertype == true) {
+    render_filtercard(filter);
+  } else {
+    render_filtercard(selected_filter);
+  }
+}
+
+
+
+
+var status_get = setInterval( () => {
+  fetch('/status')
+    .then(function (response) {
+      return response.json();
+    }).then(function (text) {
+      
+      //console.log(text["filters"])
+      //console.log(server_status["filters"])
+
+      server_status = text;
+      
+      if (rendered_filters == false) {
+        render_filterlist();
+        select_filter("nothing");
+        rendered_filters = true;
+      }
+      if (displayed_out_img == false) {
+        if(server_status["processing_complete"] == true) {
+          document.getElementById("result-image").setAttribute("src", `processed/${server_status["selected_image"]}`)
+        }
+        displayed_out_img = true;
+      }
+
+      
+      if (message_elem.innerHTML != server_status["message"]) {
+        message_elem.innerHTML = server_status["message"];
+      }
+          
+          
+  }).catch((error) => {
+    console.error("[GET] API down!");
+  });
+}, 250)
+
+
+
+
+
+
+
+
+
+
+
+
+    </script>
+
+  </body>
     
 </html>

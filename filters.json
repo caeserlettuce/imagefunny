@@ -1,0 +1,20 @@
+{
+    "filters": {
+        "nothing": {
+            "title": "nothing",
+            "description": "it just does nothing",
+            "parameters": ["base image"],
+            "img": "apple.png"
+        },
+        "greyscale": {
+            "title": "greyscale",
+            "description": "turns the image greyscale",
+            "parameters": ["base image"]
+        },
+        "invert": {
+            "title": "invert",
+            "description": "inverts all colours in the image",
+            "parameters": ["base image", "invert value"]
+        }
+    }
+}
