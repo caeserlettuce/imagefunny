@@ -96,7 +96,7 @@ label .secondary_file {
 }
 
 .infopanel-wrap {
-    width: calc(100vw - 95rem);
+    width: 20vw;
     border: 1px solid #333333;
     height: 35rem;
     border-radius: 10px;
@@ -121,7 +121,7 @@ label .secondary_file {
 
 
 .secondary-wrap {
-    width: calc(100vw - 30rem);
+    width: 70vw;
 }
 /*
 .funnyform {
@@ -129,7 +129,7 @@ label .secondary_file {
 }*/
 
 .filters-wrap {
-    width: calc(100vw - 30rem);
+    width: 100%;
     border: 1px solid #333333;
     height: 15rem;
     border-radius: 10px;
@@ -169,7 +169,7 @@ label .secondary_file {
 }
 
 .form-wrap {
-    width: calc(100vw - 30rem);
+    width: 100%;
     border: 1px solid #333333;
     height: 18.59rem;
     border-radius: 10px;

@@ -192,7 +192,7 @@ def upload_file():
 
         server_status["filter_settings"]["invert-amount"] = int(request.form.get("invert-amount"))
         if (int(request.form.get("scale")) != 0):
-            server_status["filter_settings"]["scale"] = int(request.form.get("scale"))
+            server_status["filter_settings"]["scale"] = int(request.form.get("scale")) / 100
         else:
             server_status["filter_settings"]["scale"] = 0
 
@@ -256,19 +256,18 @@ def upload_file():
                 if (dither_scale == 0):
                     # scale is auto
                     dither_scale = 1 # for now set it to 1 but when im able to i need to make it auto-scale
-                
-                dither_scale = math.floor(dither_scale)
+                elif ( dither_scale - math.floor(dither_scale ) >= 0.5): #if just decimal place is greater than or equal to 0.5
+                    dither_scale = math.ceil(dither_scale) #round up
+                elif ( dither_scale - math.floor(dither_scale ) < 0.5): #if just decimal place is less than 0.5
+                    dither_scale = math.floor(dither_scale) #round down
                 
                 print("dither scale: " + str(dither_scale))
 
-                img_tm = img_tm.resize((math.floor(img_width / dither_scale), math.floor(img_height / dither_scale)))
-                img_width, img_height = img_tm.size
+                col_img_width = math.ceil(img_width / dither_scale)
+                col_img_height = math.ceil(img_height / dither_scale + 2)
 
-                col_img_width = math.ceil(img_width)
-                col_img_height = math.ceil(img_height / 2)
-
-                tm = Image.new("RGBA", (col_img_width, col_img_height * 2), (000, 000, 000, 000)) # new image to draw on
-                res = ( math.ceil(img_width / ( among_bod["size"]["x"] )), math.ceil(img_height / ( ( among_bod["size"]["y"] + among_bod["y_space"]) )) )
+                tm = Image.new("RGBA", (col_img_width, col_img_height), (000, 000, 000, 000)) # new image to draw on
+                res = ( math.ceil(img_width / ( among_bod["size"]["x"] * dither_scale )), math.ceil(img_height / ( ( among_bod["size"]["y"] + among_bod["y_space"]) * dither_scale )) )
                 img_tm = img_tm.resize(res)
                 #img_tm.show()
                 small_img_width, small_img_height = img_tm.size
@@ -336,22 +335,18 @@ def upload_file():
                         x = x * among_bod["size"]["x"]
                         #y = y * among_bod["size"]["y"]
 
-
-
-                        manual_offsets = [
-                            0, 0, 3, 2, 1, 2, 1, 4, 0, 0, 4, 0, 0, 0, 5, 3, 0, 4, 0, 3, 5, 1, 3, 5, 0, 1, 3, 4, -1 ,0 ,1 ,2 ,3 ,4 ,5 ,-1, 0, 0, 1, 2, 2, 3, 4, 4, 5, 5, 0, 0, 0, 0, 0
-                        ]
-
-
                         
 
-
-                        if (y_tm >= img_height):
-                            print(str(y_tm) + " " + str(img_height))
+                        if (y_tm >= img_height / dither_scale):
+                            print(y_tm)
                             #y_tm = get_y_offset(0) - (small_img_height - y_tm)
-                            y_tm = y_tm - img_height - 1
-                            y_tm -= manual_offsets[dither_scale]
+                            y_tm = (y_tm - ( img_height / dither_scale )) - (1 / dither_scale)
 
+
+                        # 2 = 4 down
+                        # 4 = 2 down
+                        # 6 = 1 down
+                        # 
 
                         colour_y = y_tm / ( among_bod["size"]["x"] + 3)
 

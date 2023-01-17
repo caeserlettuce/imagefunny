@@ -36,8 +36,19 @@
         </div>
         <div class="form-wrap">
           <form action="http://localhost:5000/uploader" class="funnyform" method="POST" enctype="multipart/form-data" style="margin-top: 10px;">
-            <label class="input-label" >base image </label> <input type="file" name="file1" /><label class="input-label">secondary image (used with some filters) </label><input type="file" name="file2" /><label class="input-label">invert amount (<span id="invl">1</span>)</label><input type="range" name="invert-amount" id="invert-amount" min="0" max="100" value="100" onchange="update_labels()"><label class="input-label">
-              <br>scale (<span id="scvl">0 [auto] </span>)</label><input type="range" name="scale" id="scale" min="0" max="10000" value="0" onchange="update_labels()">
+            
+            <label class="input-label" >base image </label>
+            <input type="file" name="file1" />
+
+            <label class="input-label">secondary image (used with some filters) </label>
+            <input type="file" name="file2" />
+            <br>
+            <label class="input-label">invert amount (<span id="invl">1</span>)</label>
+            <input type="number" name="invert-amount" id="input_invert" min="0" max="100" value="100" onchange="update_labels()">
+            
+            <label class="input-label">
+              <br>scale (<span id="scvl">0 [auto] </span>)</label>
+              <input type="number" name="scale" id="input_scale" min="0" max="100" value="0" step="0.01" onchange="update_labels()">
             <br>
             
             <input type="submit" value="process photo"/>
@@ -57,7 +68,11 @@
 
 var message_elem = document.getElementById("message");
 
-
+var filter_settings = {
+  "filter": "nothing",
+  "invert": 100,
+  "scale": 0
+}
 
 var server_status = {};
 var selected_filter = "";
@@ -89,13 +104,18 @@ function listify(list, include_and) {
 
 
 function update_labels() {
-  document.getElementById("invl").innerHTML = document.getElementById("invert-amount").value / 100;
-  if (document.getElementById("scale").value / 100 == 0) {
+  document.getElementById("invl").innerHTML = document.getElementById("input_invert").value;
+  if (document.getElementById("input_scale").value == 0) {
     document.getElementById("scvl").innerHTML = "0 [auto] ";
   } else {
-    document.getElementById("scvl").innerHTML = document.getElementById("scale").value / 100
+    document.getElementById("scvl").innerHTML = document.getElementById("input_scale").value
   }
-  
+
+  for (i in filter_settings) {  // auto-save settings to localstorage
+    if (i != "filter") {
+      localStorage.setItem(`filset_${i}`, document.getElementById(`input_${i}`).value)
+    }
+  }
 }
 
 function render_filterlist() {
@@ -125,6 +145,7 @@ function select_filter(filter) {
   document.getElementById(`filter_but_${filter}`).classList.add("selected-filter");
   render_filtercard(filter, selected_filter);
   selected_filter = filter;
+  localStorage.setItem(`filset_filter`, selected_filter)
   fetch("/filter", {
     method: "POST",
     headers: {'Content-Type': 'application/json'}, 
@@ -158,7 +179,23 @@ var status_get = setInterval( () => {
       
       if (rendered_filters == false) {
         render_filterlist();
-        select_filter("nothing");
+        // auto-remember filter settings
+        for (i in filter_settings) {
+          var local = localStorage.getItem(`filset_${i}`)
+          if (local != undefined && local != "" && local != null) {
+            filter_settings[i] = local
+          } // if it is undefined then itll be default
+
+          console.log(filter_settings)
+          if (i == "filter") {
+            select_filter(filter_settings[i])
+          } else {
+            document.getElementById(`input_${i}`).value = filter_settings[i];
+          }
+        }
+
+
+        update_labels()
         rendered_filters = true;
       }
       if (displayed_out_img == false) {
@@ -178,9 +215,6 @@ var status_get = setInterval( () => {
     console.error("[GET] API down!");
   });
 }, 250)
-
-
-
 
 
 
