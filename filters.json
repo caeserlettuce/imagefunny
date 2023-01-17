@@ -15,6 +15,11 @@
             "title": "invert",
             "description": "inverts all colours in the image",
             "parameters": ["base image", "invert value"]
+        },
+        "among us dither": {
+            "title": "among us dithering",
+            "description": "make the image SUS",
+            "parameters": ["base image", "scale"]
         }
     }
 }

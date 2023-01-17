@@ -41,6 +41,16 @@ server_status = {
     "filter_settings": {}
 }
 
+among_bod = {
+    "points": [(1,0), (2,0), (3,0), (0,1), (1,1), (0,2), (1,2), (2,2), (3,2), (1,3), (2,3), (3,3), (1,4), (3,4)],
+    "size": { "x": 4, "y": 5 },
+    "face": [(2,1), (3,1)],
+    "face_colour_change": {"r": 24, "g": 15, "b": 15, "a": 0},
+    "modulus": 8,
+    "y_offset": 4,
+    "y_space": 2
+}
+
 
 filters_file = open("filters.json", "r")
 try:
@@ -122,6 +132,53 @@ def done_processing():
 def status_message(message):
     server_status["message"] = message
 
+
+# COLOUR FUNCTIONS
+
+def invert_colour(colour):
+    amount = server_status["filter_settings"]["invert-amount"]
+    #print(amount)
+    if (amount != 0):
+        if (amount == ""):
+            amount = 100
+        print(amount)
+        amount = 100 / amount
+        #print("before " + r + " " + g + ' ' + b)
+        r = int( (255 - colour[0]) / amount)
+        g = int( (255 - colour[1]) / amount)
+        b = int( (255 - colour[2]) / amount)
+        a = colour[3]
+        #print("before " + r + " " + g + ' ' + b)
+    else:
+        r = colour[0]
+        g = colour[1]
+        b = colour[2]
+        a = colour[3]
+    return (r, g, b, a)
+
+def average_colours(colour_list):
+    colours = 0
+    r = 0
+    g = 0
+    b = 0
+    a = 0
+    for col in colour_list:
+        colours += 1
+        r += col[0]
+        g += col[1]
+        b += col[2]
+        a += col[3]
+    return (r / colours, g / colours, b / colours, a / colours)
+
+def fancy_round(number):
+    out = 0
+    if ( number - math.floor(number ) >= 0.5): #if just decimal place is greater than or equal to 0.5
+        out = math.ceil(number) #round up
+    elif ( number - math.floor(number ) < 0.5): #if just decimal place is less than 0.5
+        out = math.floor(number) #round down
+    return out
+
+
 @app.route('/uploader', methods = ['GET', 'POST'])
 def upload_file():
     global server_status
@@ -133,7 +190,11 @@ def upload_file():
     
     if request.method == 'POST':
 
-        server_status["filter_settings"]["invert-amount"] = request.form.get("invert-amount")
+        server_status["filter_settings"]["invert-amount"] = int(request.form.get("invert-amount"))
+        if (int(request.form.get("scale")) != 0):
+            server_status["filter_settings"]["scale"] = int(request.form.get("scale")) / 100
+        else:
+            server_status["filter_settings"]["scale"] = 0
 
         uploaded_files_1 = request.files.getlist("file1")
         for f in uploaded_files_1:
@@ -182,10 +243,112 @@ def upload_file():
             case "greyscale":
                 img_out = ImageOps.grayscale(img_tm)
             case "invert":
-                print("inverting")                
+                for y in range(0, img_height):
+                    # for y ways
+                    for x in range(0, img_width):
+                        # for x ways
+                        og_colour  = data[y][x]
+                        img_tm.putpixel((x,y), (invert_colour(og_colour)))
+                img_out = img_tm
+            case "among us dither":
+                dither_scale = server_status["filter_settings"]["scale"]
+
+                if (dither_scale == 0):
+                    # scale is auto
+                    dither_scale = 1 # for now set it to 1 but when im able to i need to make it auto-scale
+                elif ( dither_scale - math.floor(dither_scale ) >= 0.5): #if just decimal place is greater than or equal to 0.5
+                    dither_scale = math.ceil(dither_scale) #round up
+                elif ( dither_scale - math.floor(dither_scale ) < 0.5): #if just decimal place is less than 0.5
+                    dither_scale = math.floor(dither_scale) #round down
+                
+                print("dither scale: " + str(dither_scale))
+
+                
+
+                tm = Image.new("RGBA", (math.ceil(img_width / dither_scale), math.ceil(img_height / dither_scale + 2)), (000, 000, 000, 000)) # new image to draw on
+                res = ( math.ceil(img_width / ( among_bod["size"]["x"] * dither_scale )), math.ceil(img_height / ( ( among_bod["size"]["y"] + among_bod["y_space"]) * dither_scale )) )
+                img_tm = img_tm.resize(res)
+                #img_tm.show()
+                small_img_width, small_img_height = img_tm.size
+
+                tm_draw = ImageDraw.Draw(tm)
+
+                def draw_amogus(x, y, colour):
+
+                    # generate helmet colour
+                    colour_r = colour[0]
+                    colour_g = colour[1]
+                    colour_b = colour[2]
+                    colour_a = colour[3]
+                    col_face_r = colour_r + among_bod["face_colour_change"]["r"]    # apply colour change
+                    col_face_g = colour_g + among_bod["face_colour_change"]["g"]
+                    col_face_b = colour_b + among_bod["face_colour_change"]["b"]
+                    col_face_a = colour_a + among_bod["face_colour_change"]["a"]
+                    if (col_face_r > 255):                                          # if its greater than 255, subtract instead
+                        col_face_r = colour_r - among_bod["face_colour_change"]["r"]
+                    if (col_face_g > 255):
+                        col_face_g = colour_g - among_bod["face_colour_change"]["g"]
+                    if (col_face_b > 255):
+                        col_face_b = colour_b - among_bod["face_colour_change"]["b"]
+                    if (col_face_a > 255):
+                        col_face_a = colour_a - among_bod["face_colour_change"]["a"]
+
+                    def draw_point_list(list_tm, tm_colour):
+                        for cords in list_tm:
+                            x_coord_base = x + cords[0]  # base colour x coord * among us width (treating 1 amogus as a pixel) + whatever the bod coord is
+                            x_coord_end = x + cords[0]
+                            y_coord_base = y + cords[1]   # base colour y coord * among us width (treating 1 amogus as a pixel) + whatever the bod coord is
+                            y_coord_end = y + cords[1]
+                            
+                            #print("draw [" + str(x_coord_base) + ", " + str(y_coord_base) + "] to [" + str(x_coord_end) + ", " +  str(y_coord_end) + "] with colour (" + str(colour_tm[0]) + " " + str(colour_tm[1]) + " " + str(colour_tm[2]) + " " + str(colour_tm[3]) + ")" )
+                            
+                            tm_draw.rectangle( xy=[x_coord_base, y_coord_base, x_coord_end, y_coord_end], fill=(tm_colour[0], tm_colour[1], tm_colour[2], tm_colour[3]))
+                    status_message("drawing amogi bodies...")
+                    draw_point_list(among_bod["points"], [colour_r, colour_g, colour_b, colour_a])
+                    status_message("drawing amogi helmets...")
+                    draw_point_list(among_bod["face"], [col_face_r, col_face_g, col_face_b, col_face_a])
+                    
+                    
+
+                for y in range(0, small_img_height):
+                    # for y ways
+                    for x in range(0, small_img_width):
+                        # for x ways
+
+                        odd_even = (x + 1) % 2
+
+                        def get_y_offset(y_val):
+                            y_val = (y_val * among_bod["size"]["y"]) + (y_val * among_bod["y_space"] ) + ( x / 2)
+
+                            if (odd_even == 0):
+                                y_val += among_bod["y_offset"]
+                            else:
+                                y_val += 0
+                            return y_val
+
+                        y_tm = get_y_offset(y)
+
+                        x = x * among_bod["size"]["x"]
+                        #y = y * among_bod["size"]["y"]
+
+                        colour_y = y_tm
+
+                        if (colour_y  >= small_img_height):
+                            colour_y = 0
+                            #y = (small_img_height - y)
+
+                        
+                        colour_tm = img_tm.getpixel((x / among_bod["size"]["x"], colour_y))
+                        draw_amogus(x, y_tm, colour_tm) #draw the amogus
+                        
+                            
+                img_out = tm
 
 
-        img_out.save(os.path.join(PROCESSED_FOLDER, im_filename))
+
+        out_filename = str(im_filename.split(".")[0]) + ".png"
+
+        img_out.save(os.path.join(PROCESSED_FOLDER, out_filename))
 
 
 

@@ -24,7 +24,7 @@
           </svg>
           <h2 id="filter-title"></h2>
           <h3 class="paragraph" id="filter-description"></h3><br>
-          <h3 id="filter-params-title">required parameters:</h3>
+          <h3 id="filter-params-title">parameters:</h3>
           <h3 class="paragraph" id="filter-params"></h3>
         </div> 
       </div>
@@ -36,7 +36,8 @@
         </div>
         <div class="form-wrap">
           <form action="http://localhost:5000/uploader" class="funnyform" method="POST" enctype="multipart/form-data" style="margin-top: 10px;">
-            <label class="input-label" >base image </label> <input type="file" name="file1" /><label class="input-label">secondary image (used with some filters) </label><input type="file" name="file2" /><label class="input-label">invert amount (<span id="invl">1</span>)</label><input type="range" name="invert-amount" id="invert-amount" min="0" max="10" value="10" onchange="update_labels()">
+            <label class="input-label" >base image </label> <input type="file" name="file1" /><label class="input-label">secondary image (used with some filters) </label><input type="file" name="file2" /><label class="input-label">invert amount (<span id="invl">1</span>)</label><input type="range" name="invert-amount" id="invert-amount" min="0" max="100" value="100" onchange="update_labels()"><label class="input-label">
+              <br>scale (<span id="scvl">0 [auto] </span>)</label><input type="range" name="scale" id="scale" min="0" max="10000" value="0" onchange="update_labels()">
             <br>
             
             <input type="submit" value="process photo"/>
@@ -88,7 +89,13 @@ function listify(list, include_and) {
 
 
 function update_labels() {
-  document.getElementById("invl").innerHTML = document.getElementById("invert-amount").value;
+  document.getElementById("invl").innerHTML = document.getElementById("invert-amount").value / 100;
+  if (document.getElementById("scale").value / 100 == 0) {
+    document.getElementById("scvl").innerHTML = "0 [auto] ";
+  } else {
+    document.getElementById("scvl").innerHTML = document.getElementById("scale").value / 100
+  }
+  
 }
 
 function render_filterlist() {
@@ -156,7 +163,7 @@ var status_get = setInterval( () => {
       }
       if (displayed_out_img == false) {
         if(server_status["processing_complete"] == true) {
-          document.getElementById("result-image").setAttribute("src", `processed/${server_status["selected_image"]}`)
+          document.getElementById("result-image").setAttribute("src", `processed/${server_status["selected_image"].split(".")[0]}.png`)
         }
         displayed_out_img = true;
       }
