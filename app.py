@@ -195,6 +195,12 @@ def upload_file():
             server_status["filter_settings"]["scale"] = int(request.form.get("scale"))
         else:
             server_status["filter_settings"]["scale"] = 0
+        if (request.form.get("overlay") == None):
+            server_status["overlay"] = False
+        else:
+            server_status["overlay"] = True
+
+        #server_status["overlay"]
 
         uploaded_files_1 = request.files.getlist("file1")
         for f in uploaded_files_1:
@@ -223,7 +229,9 @@ def upload_file():
 
         img_tm = Image.open(os.path.join(UPLOAD_FOLDER, im_filename)) # open image
         img_tm = img_tm.convert("RGBA")
+        og_img = img_tm.convert("RGBA")
         img_width, img_height = img_tm.size
+        img_out = img_tm
         data = []
         for y in range(0, img_height):
             # for y ways
@@ -262,6 +270,7 @@ def upload_file():
                 print("dither scale: " + str(dither_scale))
 
                 img_tm = img_tm.resize((math.floor(img_width / dither_scale), math.floor(img_height / dither_scale)))
+                og_img = og_img.resize((math.floor(img_width / dither_scale), math.floor(img_height / dither_scale)))
                 img_width, img_height = img_tm.size
 
                 col_img_width = math.ceil(img_width)
@@ -315,42 +324,41 @@ def upload_file():
                     
                     
 
-                for y in range(0, small_img_height):
+                for y in range(-1 * small_img_height, small_img_height):
                     # for y ways
                     for x in range(0, small_img_width):
                         # for x ways
+                        def get_y_offset(y_val, x):
+                            #print(y_val)
+                            #print(small_img_height)
 
-                        odd_even = (x + 1) % 2
+                            odd_even = (x + 1) % 2
 
-                        def get_y_offset(y_val):
-                            y_val = (y_val * among_bod["size"]["y"]) + (y_val * among_bod["y_space"] ) + ( x / 2)
+                            
+                            def calc_amogi(am):
+                                return (am * among_bod["size"]["y"]) + (am * among_bod["y_space"] )
+
+                            y_val = ( calc_amogi(y_val) + ( x / 2) )
 
                             if (odd_even == 0):
                                 y_val += among_bod["y_offset"]
                             else:
                                 y_val += 0
+                            
+                            #section_number = math.floor(x/17)
+
+                            #y_val -= calc_amogi(section_number + 1)
+
                             return y_val
 
-                        y_tm = get_y_offset(y)
+                        y_tm = get_y_offset(y, x)
 
                         x = x * among_bod["size"]["x"]
                         #y = y * among_bod["size"]["y"]
 
-
-
-                        manual_offsets = [
-                            0, 0, 3, 2, 1, 2, 1, 4, 0, 0, 4, 0, 0, 0, 5, 3, 0, 4, 0, 3, 5, 1, 3, 5, 0, 1, 3, 4, -1 ,0 ,1 ,2 ,3 ,4 ,5 ,-1, 0, 0, 1, 2, 2, 3, 4, 4, 5, 5, 0, 0, 0, 0, 0
-                        ]
-
-
-                        
-
-
-                        if (y_tm >= img_height):
-                            print(str(y_tm) + " " + str(img_height))
-                            #y_tm = get_y_offset(0) - (small_img_height - y_tm)
-                            y_tm = y_tm - img_height - 1
-                            y_tm -= manual_offsets[dither_scale]
+                        #if (y_tm >= img_height):
+                            #rint(y)
+                            #y_tm = y_tm - ( ( (img_height - 1) - math.ceil( (img_width - 1) / 2) ) * 2 )
 
 
                         colour_y = y_tm / ( among_bod["size"]["x"] + 3)
@@ -358,14 +366,19 @@ def upload_file():
                         if (colour_y >= small_img_height):
                             colour_y = 0
                             #y = (small_img_height - y)
-
+                        if (colour_y < 0):
+                            colour_y = 0
                         
                         colour_tm = img_tm.getpixel((x / among_bod["size"]["x"], colour_y))
                         draw_amogus(x, y_tm, colour_tm) #draw the amogus
-                        
-                            
-                img_out = tm
 
+                
+                if (server_status["overlay"] == True):
+                    img_out = og_img
+                    #og_img.show()
+                    img_out.paste(tm, (0,0), mask=tm)
+                else:
+                    img_out = tm
 
 
         out_filename = str(im_filename.split(".")[0]) + ".png"

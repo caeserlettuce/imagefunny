@@ -203,3 +203,7 @@ label .secondary_file {
 input[type="range"] {
     transform: translateY(11px);
 }
+
+.infopanel-preview image {
+    image-rendering: pixelated;
+}
