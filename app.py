@@ -3,12 +3,8 @@ from flask import Flask, Response, send_from_directory, request, redirect, jsoni
 from werkzeug.utils import secure_filename
 from datetime import datetime
 from PIL import Image, ImageOps, ImageFilter, ImageDraw, ImageColor
-import os, sys
-import json
-import atexit
-import math
-import random
-import logging
+import os, sys, json, atexit, math, random, logging
+
 now = datetime.now()
 log_file = "log.json"
 
